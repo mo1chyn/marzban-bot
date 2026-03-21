@@ -1,0 +1,16 @@
+[Unit]
+Description=Marzban Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/marzban-bot
+EnvironmentFile=/opt/marzban-bot/.env
+ExecStart=/opt/marzban-bot/.venv/bin/python -m bot.main
+Restart=always
+RestartSec=5
+User=marzbanbot
+Group=marzbanbot
+
+[Install]
+WantedBy=multi-user.target
