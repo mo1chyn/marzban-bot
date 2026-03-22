@@ -1,14 +1,21 @@
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.texts.messages import MARZBAN_TEMP_UNAVAILABLE
 from config import Settings
 from db.crud.admin import log_admin_action
 from db.crud.user import get_by_telegram_id
 from db.crud.vpn_account import get_account_by_user_id
-from services.marzban_client import MarzbanClient
+from services.marzban_client import MarzbanAPIError, MarzbanClient
 
 router = Router(name="admin_actions")
+
+
+class AdminFindUserState(StatesGroup):
+    waiting_for_telegram_id = State()
 
 
 def is_admin(telegram_id: int, settings: Settings) -> bool:
@@ -16,15 +23,18 @@ def is_admin(telegram_id: int, settings: Settings) -> bool:
 
 
 @router.message(F.text == "Найти пользователя")
-async def find_user(message: Message, settings: Settings, session: AsyncSession) -> None:
+async def find_user(message: Message, settings: Settings, state: FSMContext) -> None:
     if not is_admin(message.from_user.id, settings):
         await message.answer("Недостаточно прав.")
         return
+    await state.set_state(AdminFindUserState.waiting_for_telegram_id)
     await message.answer("Отправьте Telegram ID пользователя отдельным сообщением.")
 
 
-@router.message(F.text.regexp(r"^\d{5,}$"))
-async def find_user_by_telegram_id(message: Message, settings: Settings, session: AsyncSession) -> None:
+@router.message(AdminFindUserState.waiting_for_telegram_id, F.text.regexp(r"^\d{5,}$"))
+async def find_user_by_telegram_id(
+    message: Message, settings: Settings, session: AsyncSession, state: FSMContext
+) -> None:
     if not is_admin(message.from_user.id, settings):
         return
     telegram_id = int(message.text)
@@ -40,6 +50,12 @@ async def find_user_by_telegram_id(message: Message, settings: Settings, session
     await message.answer(
         f"Пользователь найден:\nTelegram ID: {telegram_id}\nMarzban: {account.marzban_username}\nСтатус: {account.status}"
     )
+    await state.clear()
+
+
+@router.message(AdminFindUserState.waiting_for_telegram_id)
+async def find_user_invalid_input(message: Message) -> None:
+    await message.answer("Неверный формат. Введите Telegram ID (только цифры).")
 
 
 @router.message(F.text == "Посмотреть usage")
@@ -61,6 +77,10 @@ async def reset_traffic(message: Message, settings: Settings, session: AsyncSess
     if not is_admin(message.from_user.id, settings):
         return
     username = message.text.split(maxsplit=1)[1].strip()
-    await marzban_client.reset_traffic(username)
+    try:
+        await marzban_client.reset_traffic(username)
+    except MarzbanAPIError:
+        await message.answer(MARZBAN_TEMP_UNAVAILABLE)
+        return
     await log_admin_action(session, message.from_user.id, "reset_traffic", username)
     await message.answer(f"Трафик для {username} сброшен.")

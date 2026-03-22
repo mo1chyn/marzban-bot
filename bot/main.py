@@ -4,7 +4,6 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.types import TelegramObject
 from aiogram.dispatcher.middlewares.base import BaseMiddleware
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.routers.admin.actions import router as admin_actions_router
 from bot.routers.admin.panel import router as admin_panel_router

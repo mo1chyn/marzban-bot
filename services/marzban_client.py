@@ -79,14 +79,16 @@ class MarzbanClient:
         traffic_limit_gb: int,
         ip_limit: int,
         inbound_tags: list[str],
+        protocol: str | None = None,
     ) -> dict[str, Any]:
+        selected_protocol = protocol or self._settings.marzban_protocol
         payload = {
             "username": username,
             "status": "active",
             "expire": int(expire_at.timestamp()),
             "data_limit": traffic_limit_gb * 1024**3,
             "proxies": {},
-            "inbounds": {"vless": inbound_tags},
+            "inbounds": {selected_protocol: inbound_tags},
             "on_hold_timeout": 0,
             "note": "created by telegram bot",
             "ip_limit": ip_limit,
@@ -117,7 +119,17 @@ class MarzbanClient:
     async def get_usage(self, username: str) -> dict[str, Any]:
         return await self._request("GET", self._endpoint(self._settings.marzban_endpoint_usage, username=username))
 
-    async def set_inbounds(self, username: str, inbound_tags: list[str]) -> dict[str, Any]:
+    async def set_inbounds(
+        self,
+        username: str,
+        inbound_tags: list[str],
+        protocol: str | None = None,
+    ) -> dict[str, Any]:
         user = await self.get_user(username)
-        user["inbounds"] = {"vless": inbound_tags}
+        selected_protocol = protocol or self._settings.marzban_protocol
+        current_inbounds = user.get("inbounds") or {}
+        if not isinstance(current_inbounds, dict):
+            current_inbounds = {}
+        current_inbounds[selected_protocol] = inbound_tags
+        user["inbounds"] = current_inbounds
         return await self.update_user(username, user)
