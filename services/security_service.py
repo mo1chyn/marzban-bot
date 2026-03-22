@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,10 +16,11 @@ class SecurityService:
         self.notifier = notifier
 
     async def check_ip_sharing(self, session: AsyncSession, account: VPNAccount) -> bool:
+        window_start = datetime.now(timezone.utc) - timedelta(hours=24)
         stmt = (
             select(func.count(func.distinct(IPHistory.ip_address)))
             .where(IPHistory.vpn_account_id == account.id)
-            .where(IPHistory.created_at >= func.datetime("now", "-24 hours"))
+            .where(IPHistory.created_at >= window_start)
         )
         result = await session.execute(stmt)
         unique_ip_count = result.scalar_one() or 0
