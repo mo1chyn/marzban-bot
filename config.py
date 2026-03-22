@@ -1,16 +1,16 @@
 from functools import lru_cache
-from typing import List
+from typing import Annotated, List
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     telegram_bot_token: str = Field(alias="TELEGRAM_BOT_TOKEN")
-    telegram_admin_ids: List[int] = Field(default_factory=list, alias="TELEGRAM_ADMIN_IDS")
-    telegram_support_ids: List[int] = Field(default_factory=list, alias="TELEGRAM_SUPPORT_IDS")
+    telegram_admin_ids: Annotated[List[int], NoDecode] = Field(default_factory=list, alias="TELEGRAM_ADMIN_IDS")
+    telegram_support_ids: Annotated[List[int], NoDecode] = Field(default_factory=list, alias="TELEGRAM_SUPPORT_IDS")
 
     marzban_base_url: str = Field(alias="MARZBAN_BASE_URL")
     marzban_username: str = Field(alias="MARZBAN_USERNAME")
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     default_profile_code: str = Field(default="", alias="DEFAULT_PROFILE_CODE")
     support_url: str = Field(default="", alias="SUPPORT_URL")
-    notify_expire_days: List[int] = Field(default_factory=lambda: [3, 1], alias="NOTIFY_EXPIRE_DAYS")
+    notify_expire_days: Annotated[List[int], NoDecode] = Field(default_factory=lambda: [3, 1], alias="NOTIFY_EXPIRE_DAYS")
 
     @field_validator("telegram_admin_ids", "telegram_support_ids", mode="before")
     @classmethod
