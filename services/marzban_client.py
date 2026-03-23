@@ -119,6 +119,38 @@ class MarzbanClient:
     async def get_usage(self, username: str) -> dict[str, Any]:
         return await self._request("GET", self._endpoint(self._settings.marzban_endpoint_usage, username=username))
 
+    async def get_user_used_traffic_bytes(self, username: str) -> int | None:
+        """Возвращает использованный трафик пользователя в байтах, если поле найдено в API."""
+        user_payload = await self.get_user(username)
+        used = self._extract_used_traffic_bytes(user_payload)
+        if used is not None:
+            return used
+
+        usage_payload = await self.get_usage(username)
+        return self._extract_used_traffic_bytes(usage_payload)
+
+    @staticmethod
+    def _extract_used_traffic_bytes(payload: dict[str, Any]) -> int | None:
+        candidates = (
+            "used_traffic",
+            "used_traffic_bytes",
+            "data_limit_used",
+            "traffic_used",
+            "up",
+            "download",
+        )
+        for field in candidates:
+            value = payload.get(field)
+            if isinstance(value, (int, float)) and value >= 0:
+                return int(value)
+
+        usages = payload.get("usages")
+        if isinstance(usages, dict):
+            total = usages.get("total")
+            if isinstance(total, (int, float)) and total >= 0:
+                return int(total)
+        return None
+
     async def get_online_users(self) -> list[dict[str, Any]]:
         """
         Возвращает онлайн-пользователей из Marzban.
