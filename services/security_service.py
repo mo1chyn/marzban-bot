@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import Settings
+from bot.texts.messages import SHARING_WARNING
 from db.crud.security import add_suspicious_event
 from db.models.ip_history import IPHistory
 from db.models.vpn_account import VPNAccount
@@ -33,6 +34,7 @@ class SecurityService:
 
         await add_suspicious_event(session, account.id, "ip_sharing", message, auto_blocked=auto_blocked)
         await self.notifier.notify_admins(f"⚠️ Suspicious event: {message}")
+        await self.notifier.notify_user(account.telegram_user.telegram_id, SHARING_WARNING)
 
         if auto_blocked:
             account.status = "disabled"

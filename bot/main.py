@@ -12,6 +12,7 @@ from bot.routers.user.profile import router as user_profile_router
 from bot.routers.user.start import router as user_start_router
 from bot.routers.user.vpn import router as user_vpn_router
 from config import Settings, get_settings
+from db.crud.user import get_by_telegram_id
 from db.session import SessionLocal
 from logging_config import setup_logging
 from scheduler.scheduler import build_scheduler
@@ -43,6 +44,22 @@ class MarzbanMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
+class BlockedUserMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event: TelegramObject, data: dict):
+        user = getattr(event, "from_user", None)
+        session = data.get("session")
+        if user is None or session is None:
+            return await handler(event, data)
+
+        db_user = await get_by_telegram_id(session, user.id)
+        if db_user and db_user.is_blocked:
+            if hasattr(event, "answer"):
+                await event.answer("Ваш доступ к боту ограничен. Обратитесь в поддержку.")
+            return None
+
+        return await handler(event, data)
+
+
 async def main() -> None:
     settings = get_settings()
     setup_logging(settings.log_level)
@@ -55,6 +72,7 @@ async def main() -> None:
     dp.update.middleware(SettingsMiddleware(settings))
     dp.update.middleware(DbSessionMiddleware())
     dp.update.middleware(MarzbanMiddleware(marzban_client))
+    dp.update.middleware(BlockedUserMiddleware())
 
     dp.include_router(user_start_router)
     dp.include_router(user_vpn_router)

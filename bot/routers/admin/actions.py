@@ -3,12 +3,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from bot.texts.messages import MARZBAN_TEMP_UNAVAILABLE
 from config import Settings
 from db.crud.admin import log_admin_action
 from db.crud.user import get_by_telegram_id
 from db.crud.vpn_account import get_account_by_user_id
+from db.models.vpn_account import VPNAccount
 from services.marzban_client import MarzbanAPIError, MarzbanClient
 
 router = Router(name="admin_actions")
@@ -84,3 +86,37 @@ async def reset_traffic(message: Message, settings: Settings, session: AsyncSess
         return
     await log_admin_action(session, message.from_user.id, "reset_traffic", username)
     await message.answer(f"Трафик для {username} сброшен.")
+
+
+@router.message(F.text.regexp(r"^/setiplimit\s+\S+\s+\d+$"))
+async def set_ip_limit(
+    message: Message,
+    settings: Settings,
+    session: AsyncSession,
+    marzban_client: MarzbanClient,
+) -> None:
+    if not is_admin(message.from_user.id, settings):
+        return
+
+    _, username, ip_limit_raw = message.text.split(maxsplit=2)
+    ip_limit = int(ip_limit_raw)
+    if ip_limit < 1 or ip_limit > 16:
+        await message.answer("IP-лимит должен быть в диапазоне 1..16.")
+        return
+
+    stmt = select(VPNAccount).where(VPNAccount.marzban_username == username)
+    account = (await session.execute(stmt)).scalar_one_or_none()
+    if not account:
+        await message.answer("Аккаунт не найден в локальной БД.")
+        return
+
+    try:
+        await marzban_client.update_user(username, {"ip_limit": ip_limit})
+    except MarzbanAPIError:
+        await message.answer(MARZBAN_TEMP_UNAVAILABLE)
+        return
+
+    account.ip_limit = ip_limit
+    await session.commit()
+    await log_admin_action(session, message.from_user.id, "set_ip_limit", f"{username}:{ip_limit}")
+    await message.answer(f"IP-лимит для {username} обновлён: {ip_limit}")

@@ -64,4 +64,13 @@ async def check_ip_sharing_job(
         for account in result.scalars().all():
             for ip in username_to_ips.get(account.marzban_username, set()):
                 await add_ip_history(session, account.id, ip)
+
+            try:
+                used_traffic_bytes = await marzban_client.get_user_used_traffic_bytes(account.marzban_username)
+                if used_traffic_bytes is not None:
+                    account.used_traffic_bytes = used_traffic_bytes
+            except Exception as exc:
+                logger.error("Не удалось синхронизировать трафик для %s: %s", account.marzban_username, exc)
+
             await security_service.check_ip_sharing(session, account)
+        await session.commit()
