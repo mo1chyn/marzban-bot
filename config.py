@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     marzban_endpoint_user_by_name: str = Field(default="/api/user/{username}", alias="MARZBAN_ENDPOINT_USER_BY_NAME")
     marzban_endpoint_reset_traffic: str = Field(default="/api/user/{username}/reset", alias="MARZBAN_ENDPOINT_RESET_TRAFFIC")
     marzban_endpoint_usage: str = Field(default="/api/user/{username}/usage", alias="MARZBAN_ENDPOINT_USAGE")
+    marzban_endpoint_online_users: str = Field(default="/api/users/online", alias="MARZBAN_ENDPOINT_ONLINE_USERS")
     marzban_protocol: str = Field(default="vless", alias="MARZBAN_PROTOCOL")
 
     database_url: str = Field(default="sqlite+aiosqlite:///./app.db", alias="DATABASE_URL")

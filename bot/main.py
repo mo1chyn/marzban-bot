@@ -63,7 +63,7 @@ async def main() -> None:
     dp.include_router(admin_panel_router)
     dp.include_router(admin_actions_router)
 
-    scheduler = build_scheduler(bot, settings)
+    scheduler = build_scheduler(bot, settings, marzban_client)
     scheduler.start()
 
     try:
