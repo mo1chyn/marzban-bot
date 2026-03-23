@@ -119,6 +119,23 @@ class MarzbanClient:
     async def get_usage(self, username: str) -> dict[str, Any]:
         return await self._request("GET", self._endpoint(self._settings.marzban_endpoint_usage, username=username))
 
+    async def get_online_users(self) -> list[dict[str, Any]]:
+        """
+        Возвращает онлайн-пользователей из Marzban.
+
+        В зависимости от версии API ответ может быть:
+        - {"users": [{...}, ...]}
+        - [{...}, ...]
+        """
+        result = await self._request("GET", self._settings.marzban_endpoint_online_users)
+        if isinstance(result, list):
+            return [entry for entry in result if isinstance(entry, dict)]
+
+        users = result.get("users", [])
+        if isinstance(users, list):
+            return [entry for entry in users if isinstance(entry, dict)]
+        return []
+
     async def set_inbounds(
         self,
         username: str,
