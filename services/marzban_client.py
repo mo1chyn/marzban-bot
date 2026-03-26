@@ -80,6 +80,7 @@ class MarzbanClient:
         ip_limit: int,
         inbound_tags: list[str],
         protocol: str | None = None,
+        note: str = "created by telegram bot",
     ) -> dict[str, Any]:
         selected_protocol = protocol or self._settings.marzban_protocol
         payload = {
@@ -90,7 +91,7 @@ class MarzbanClient:
             "proxies": {},
             "inbounds": {selected_protocol: inbound_tags},
             "on_hold_timeout": 0,
-            "note": "created by telegram bot",
+            "note": note,
             "ip_limit": ip_limit,
         }
         return await self._request("POST", self._settings.marzban_endpoint_users, json=payload)
