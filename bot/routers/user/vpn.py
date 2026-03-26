@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import re
 
 from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
@@ -29,7 +30,12 @@ class TrialActivationState(StatesGroup):
     waiting_for_username = State()
 
 
-@router.message(F.text == "Мой VPN")
+@router.message(Command("profile"))
+async def profile_command(message: Message, session: AsyncSession) -> None:
+    await my_vpn(message, session)
+
+
+@router.message(F.text.in_({"Мой VPN", "🛡️ Моя подписка"}))
 async def my_vpn(message: Message, session: AsyncSession) -> None:
     user = await get_by_telegram_id(session, message.from_user.id)
     if not user:
@@ -169,7 +175,7 @@ async def get_config(message: Message, session: AsyncSession) -> None:
     await message.answer(f"Ваша ссылка подписки:\n{account.subscription_url}")
 
 
-@router.message(F.text == "Купить/Активировать доступ")
+@router.message(F.text.in_({"Купить/Активировать доступ", "🔑 Приобрести подписку"}))
 async def buy_or_activate(message: Message) -> None:
     await message.answer("Для активации доступа обратитесь в поддержку или к администратору.")
 
