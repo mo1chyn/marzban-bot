@@ -34,6 +34,10 @@ class MarzbanClient:
         return template.format(**kwargs)
 
     async def _authenticate(self) -> None:
+        if self._settings.marzban_token:
+            self._token = self._settings.marzban_token
+            return
+
         response = await self._client.post(
             self._settings.marzban_endpoint_token,
             data={"username": self._settings.marzban_username, "password": self._settings.marzban_password},
@@ -76,18 +80,19 @@ class MarzbanClient:
         self,
         username: str,
         expire_at: datetime,
-        traffic_limit_gb: int,
+        traffic_limit_gb: int | None,
         ip_limit: int,
         inbound_tags: list[str],
         protocol: str | None = None,
         note: str = "created by telegram bot",
     ) -> dict[str, Any]:
         selected_protocol = protocol or self._settings.marzban_protocol
+        data_limit = 0 if traffic_limit_gb is None else traffic_limit_gb * 1024**3
         payload = {
             "username": username,
             "status": "active",
             "expire": int(expire_at.timestamp()),
-            "data_limit": traffic_limit_gb * 1024**3,
+            "data_limit": data_limit,
             "proxies": {},
             "inbounds": {selected_protocol: inbound_tags},
             "on_hold_timeout": 0,
