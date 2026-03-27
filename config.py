@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Annotated, List
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -9,12 +9,17 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     telegram_bot_token: str = Field(alias="TELEGRAM_BOT_TOKEN")
-    telegram_admin_ids: Annotated[List[int], NoDecode] = Field(default_factory=list, alias="TELEGRAM_ADMIN_IDS")
+    telegram_admin_ids: Annotated[List[int], NoDecode] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("TELEGRAM_ADMIN_IDS", "ADMIN_IDS"),
+    )
     telegram_support_ids: Annotated[List[int], NoDecode] = Field(default_factory=list, alias="TELEGRAM_SUPPORT_IDS")
+    admin_chat_id: int = Field(default=0, validation_alias=AliasChoices("ADMIN_CHAT_ID", "TELEGRAM_ADMIN_CHAT_ID"))
 
-    marzban_base_url: str = Field(alias="MARZBAN_BASE_URL")
+    marzban_base_url: str = Field(validation_alias=AliasChoices("MARZBAN_BASE_URL", "MARZBAN_URL"))
     marzban_username: str = Field(alias="MARZBAN_USERNAME")
     marzban_password: str = Field(alias="MARZBAN_PASSWORD")
+    marzban_token: str = Field(default="", validation_alias=AliasChoices("MARZBAN_TOKEN"))
     marzban_timeout_seconds: int = Field(default=15, alias="MARZBAN_TIMEOUT_SECONDS")
     marzban_retry_count: int = Field(default=3, alias="MARZBAN_RETRY_COUNT")
 
